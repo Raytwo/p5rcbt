@@ -1,3 +1,5 @@
+use nn_fuse::{FAccessor, FsAccessor, FileSystemAccessor, FsEntryType, AccessorResult, DAccessor };
+
 pub struct ModFuse;
 
 impl FileSystemAccessor for ModFuse {
@@ -20,7 +22,6 @@ impl FileSystemAccessor for ModFuse {
 }
 
 pub fn install_mods_vfs() {
-    let accessor = FsAccessor::new(ArcFuse);
+    let accessor = FsAccessor::new(ModFuse);
     unsafe { nn_fuse::mount("mods", &mut *accessor).unwrap() };
-    println!("Finished mounting mods:/");
 }

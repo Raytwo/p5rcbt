@@ -20,6 +20,7 @@ skyline = "0.2.0"
 nn-fuse = { git = "https://github.com/Raytwo/nn-fuse", branch = "nn_path" }
 camino = "1"
 thiserror = "1.0.30"
+semver = { version = "1", features = ["serde"] }
 
 [profile.dev]
 panic = "abort"
