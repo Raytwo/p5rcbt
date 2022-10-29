@@ -11,7 +11,7 @@ This comes built-in with the following features:
 
 * File logger (use the [following executable](https://github.com/Coolsonickirby/skyline-logger-files/releases/download/1.0.0/skyline_logger_rust.exe) for logging. Use 127.0.0.1 as the IP if you plan to mod on Ryujinx)
 * Loose file loading (Valid paths are ``sd:/p5r/`` and ``sd:/atmosphere/contents/01005CA01580E000/romfs/CPK/BIND``)
-
+* 60 FPS patch
 
 
 ## Downloads 
