@@ -1,0 +1,29 @@
+[package]
+name = "cbt"
+version = "0.1.0"
+authors = []
+edition = "2021"
+
+[package.metadata.skyline]
+titleid = "01005CA01580E000"
+package-resources = [
+    { local = "ModFiles/exefs", package = "atmosphere/contents/01005CA01580E000/exefs" },
+    { local = "ModFiles/sd", package = "p5r" },
+    { local = "ModFiles/sd", package = "atmosphere/contents/01005CA01580E000/romfs/CPK/BIND" },
+]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+skyline = "0.2.0"
+nn-fuse = { git = "https://github.com/Raytwo/nn-fuse", branch = "nn_path" }
+camino = "1"
+thiserror = "1.0.30"
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
+lto = true
