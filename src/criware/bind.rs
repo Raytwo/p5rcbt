@@ -7,10 +7,6 @@ pub enum DirBindingError {
     CriwareErrorCode(i32),
     #[error("the path provided is not absolute: {0}")]
     PathNotAbsolute(Utf8PathBuf),
-    #[error("the path provided is not a directory: {0}")]
-    NotADirectory(Utf8PathBuf),
-    #[error("the path provided does not exist on the mount point: {0}")]
-    DirectoryDoesNotExist(Utf8PathBuf)
 }
 
 pub type CriFnBinderHandle = u64;
@@ -28,10 +24,6 @@ pub fn bind_directory<P: AsRef<Utf8Path>>(binder_handle: CriFnBinderHandle, path
 
     if !path.is_absolute() {
         Err(DirBindingError::PathNotAbsolute(path.to_path_buf()))
-    } else if !path.is_dir() {
-        Err(DirBindingError::NotADirectory(path.to_path_buf()))
-    } else if !path.exists() {
-        Err(DirBindingError::DirectoryDoesNotExist(path.to_path_buf()))
     } else {
         let nullterm_path = format!("{}\0", path);
 
