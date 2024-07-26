@@ -14,7 +14,8 @@ pub type CriFnBinderHandle = u64;
 #[skyline::from_offset(0x8a92d0)]
 pub fn get_binder_handle() -> CriFnBinderHandle;
 
-#[skyline::from_offset(0x1302710)]
+// Old offset: 0x1302710
+#[skyline::from_offset(0x1302150)]
 pub fn crifsbinder_bind_directory(binder: CriFnBinderHandle, src_binder: *const u8, path: *const u8, work: *const u8, work_size: i32, bind_id: &mut u32) -> i32;
 
 pub fn bind_directory<P: AsRef<Utf8Path>>(binder_handle: CriFnBinderHandle, path: P) -> Result<u32, DirBindingError> {

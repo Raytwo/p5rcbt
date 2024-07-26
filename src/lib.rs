@@ -15,7 +15,8 @@ macro_rules! reg_x {
     };
 }
 
-#[skyline::hook(offset = 0x1025e3c, inline)]
+// Old offset: 0x1025e3c
+#[skyline::hook(offset = 0x102603c, inline)]
 pub fn sixty_fps_hook(ctx: &mut InlineCtx) {
     unsafe {
         *ctx.registers[1].x.as_mut() = 0u64;
@@ -33,7 +34,8 @@ pub fn mount_directories(_: &InlineCtx) {
     criware::bind::bind_directory(binder_hn, "app0:/CPK/BIND").unwrap();
 }
 
-#[skyline::hook(offset = 0x130a930)]
+// Old offset: 0x130a930
+#[skyline::hook(offset = 0x130ab30)]
 pub fn load_file_hook(unk1: *const u8, binder: *const u8, filepath: *const u8, offset: u64, filesize: u64) -> i32 {
     let filename = unsafe { CStr::from_ptr(filepath as _) };
     
@@ -42,7 +44,8 @@ pub fn load_file_hook(unk1: *const u8, binder: *const u8, filepath: *const u8, o
     call_original!(unk1, binder, filepath, offset, filesize)
 }
 
-#[skyline::hook(offset = 0x12f0910, inline)]
+// Old offset: 0x12f0910
+#[skyline::hook(offset = 0x12f0b10, inline)]
 pub fn print_criware_error(ctx: &InlineCtx) {
     let message = unsafe { CStr::from_ptr(reg_x!(ctx, 1) as *const u8 as _) };
 
