@@ -7,9 +7,9 @@ edition = "2021"
 [package.metadata.skyline]
 titleid = "01005CA01580E000"
 package-resources = [
-    { local = "ModFiles/exefs", package = "atmosphere/contents/01005CA01580E000/exefs" },
-    { local = "ModFiles/sd", package = "p5r" },
-    { local = "ModFiles/sd", package = "atmosphere/contents/01005CA01580E000/romfs/CPK/BIND" },
+    { local = "ModFiles/exefs", package = "atmosphere/contents/01005CA01580E000/exefs/" },
+    { local = "ModFiles/sd", package = "p5r/" },
+    { local = "ModFiles/sd", package = "atmosphere/contents/01005CA01580E000/romfs/CPK/BIND/" },
 ]
 
 [lib]

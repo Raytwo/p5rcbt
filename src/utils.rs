@@ -2,37 +2,6 @@ use std::str::FromStr;
 use skyline::nn;
 use semver::Version;
 
-pub mod env {
-    use std::sync::LazyLock;
-
-    #[non_exhaustive]
-    pub enum RunEnvironment {
-        Switch,
-        Ryujinx,
-        // Yuzu
-    }
-
-    static PLATFORM: LazyLock<RunEnvironment> = LazyLock::new(|| {
-        if unsafe { skyline::hooks::getRegionAddress(skyline::hooks::Region::Text) as u64 } == 0x8004000 {
-            RunEnvironment::Ryujinx
-        } else {
-            RunEnvironment::Switch
-        }
-    });
-
-    pub fn get_running_env() -> &'static RunEnvironment {
-        &PLATFORM
-    }
-
-    pub fn is_emulator() -> bool {
-        matches!(get_running_env(), RunEnvironment::Switch)
-    }
-
-    pub fn is_ryujinx() -> bool {
-        matches!(get_running_env(), RunEnvironment::Ryujinx)
-    }
-}
-
 /// Wrapper function for getting the version string of the game from nnSdk
 pub fn get_game_version() -> Version {
     unsafe {
