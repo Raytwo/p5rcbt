@@ -26,7 +26,7 @@ pub fn bind_directory<P: AsRef<Utf8Path>>(binder_handle: CriFnBinderHandle, path
     if !path.is_absolute() {
         Err(DirBindingError::PathNotAbsolute(path.to_path_buf()))
     } else {
-        let nullterm_path = format!("{}\0", path);
+        let nullterm_path = format!("{path}\0");
 
         let bind_path = skyline::c_str(&nullterm_path);
         let mut out_bind_id = 0;

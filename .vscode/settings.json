@@ -1,3 +1,5 @@
 {
-    "rust-analyzer.server.extraEnv": {"RUSTFLAGS" : "--cfg skyline_std_v3"}
+    "rust-analyzer.server.extraEnv": {
+        "RUSTFLAGS": "--cfg skyline_std_v3"
+    },
 }

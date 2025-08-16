@@ -1,35 +1,44 @@
-use std::ffi::CStr;
+use std::{ffi::CStr, fs::read_dir, str::FromStr, sync::LazyLock};
+use camino::{Utf8Path, Utf8PathBuf};
+use semver::Version;
+use serde::{Deserialize, Serialize};
 use skyline::hooks::InlineCtx;
 
-
-mod fuse;
 mod criware;
 mod utils;
-
-#[macro_export]
-macro_rules! reg_x {
-    ($ctx:ident, $no:expr) => {
-        unsafe { *$ctx.registers[$no].x.as_ref() }
-    };
-}
 
 // Old offset: 0x1025e3c
 #[skyline::hook(offset = 0x102603c, inline)]
 pub fn sixty_fps_hook(ctx: &mut InlineCtx) {
-    unsafe {
-        *ctx.registers[1].x.as_mut() = 0u64;
-    }
+    ctx.registers[1].set_x(0);
 }
 
 #[skyline::hook(offset = 0x8a9134, inline)]
 pub fn mount_directories(_: &InlineCtx) {
     let binder_hn = unsafe { criware::bind::get_binder_handle() };
 
+    // Merge mods into one virtual filesystem that can then be mounted and accessed by Criware like normal.
     // fuse::mods::install_mods_vfs();
-
     // criware::bind::bind_directory(binder_hn, "mods:/").unwrap();
-    criware::bind::bind_directory(binder_hn, "sd:/p5r").unwrap();
-    criware::bind::bind_directory(binder_hn, "app0:/CPK/BIND").unwrap();
+
+    let base_dir = Utf8PathBuf::from_str("sd:/p5r/bind").unwrap();
+
+    // Don't bother running the rest if the bind directory doesnt even exist.
+    if let Ok(reader) = read_dir(base_dir) {
+        let mut entries: Vec<_> = reader
+            .filter_map(Result::ok)
+            .filter(|idk| idk.path().is_dir())
+            .collect();
+
+        entries.sort_by_key(|dir| dir.file_name());
+
+        // Only take valid entries
+        for entry in entries {
+            if let Err(error) = criware::bind::bind_directory(binder_hn, dbg!(Utf8Path::from_path(&entry.path()).unwrap())) {
+                panic!("Error while trying to bind a directory for Criware: {}", error);
+            }
+        }
+    }
 }
 
 // Old offset: 0x130a930
@@ -45,7 +54,7 @@ pub fn load_file_hook(unk1: *const u8, binder: *const u8, filepath: *const u8, o
 // Old offset: 0x12f0910
 #[skyline::hook(offset = 0x12f0b10, inline)]
 pub fn print_criware_error(ctx: &InlineCtx) {
-    let message = unsafe { CStr::from_ptr(reg_x!(ctx, 1) as *const u8 as _) };
+    let message = unsafe { CStr::from_ptr(ctx.registers[1].x() as *const i8) };
 
     println!("Criware: {}", message.to_str().unwrap());
 }
@@ -55,7 +64,28 @@ pub fn is_platform_pc() -> bool {
     true
 }
 
-#[skyline::main(name = "cpk")]
+#[derive(Serialize, Deserialize)]
+pub struct Config {
+    pub logging: bool,
+    pub uncap_framerate: bool,
+    pub pc_settings: bool,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self { logging: false, uncap_framerate: true, pc_settings: false }
+    }
+}
+
+pub static CONFIG: LazyLock<Config> = LazyLock::new(|| {
+    if let Ok(text) = std::fs::read("sd:/p5r/cfg/cbt.toml") {
+        toml::from_slice(&text).unwrap_or_default()
+    } else {
+        Config::default()
+    }
+});
+
+#[skyline::main(name = "cbt")]
 pub fn main() {
     // Install a panic handler to display a native error popup on Switch
     std::panic::set_hook(Box::new(|info| {
@@ -71,13 +101,42 @@ pub fn main() {
             },
         };
 
-        let err_msg = format!("thread has panicked at '{}', {}", msg, location);
-        skyline::error::show_error(
-            69,
-            "Skyline plugin has panicked! Please open the details and send a screenshot to the developer, then close the game.\n\0",
-            err_msg.as_str(),
+        println!("P5R CBT v{}\nLocation: {}\n\n{}", utils::get_plugin_version(), location, msg);
+
+        let err_msg = format!(
+            "P5R CBT v{}\nLocation: {}\n\n{}\0",
+            utils::get_plugin_version(),
+            location,
+            msg
         );
+
+        skyline::error::show_error(69, "P5R CBT has panicked! Press 'Details' for more information.\n\0", err_msg.as_str());
     }));
 
-    skyline::install_hooks!(sixty_fps_hook, print_criware_error, load_file_hook, mount_directories);
+    let current_ver = utils::get_game_version();
+
+    if current_ver != Version::new(1, 0, 2) {
+        skyline::error::show_error(69,
+            &format!("P5RCBT is only compatible with Persona 5 Royal version 1.0.2, but you are running version {current_ver}."),
+            &format!("P5RCBT is only compatible with Persona 5 Royal version 1.0.2, but you are running version {current_ver}.\nConsider updating your game or uninstalling P5R CBT.\n\nP5R CBT will not run for this play session.")
+        );
+
+        return;
+    }
+
+    if CONFIG.logging {
+        skyline::install_hooks!(load_file_hook, print_criware_error);
+    }
+
+    if CONFIG.pc_settings {
+        skyline::install_hook!(is_platform_pc);
+    }
+
+    if CONFIG.uncap_framerate {
+        skyline::install_hook!(sixty_fps_hook);
+    }
+
+    skyline::install_hook!(mount_directories);
+
+    println!("P5R CBT is installed and running");
 }
