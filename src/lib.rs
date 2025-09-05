@@ -192,7 +192,5 @@ pub fn main() {
 
     skyline::install_hooks!(cri_bind_cpk_hook, PUT_fix, PUTS_fix, PUTF_fix);
 
-    skyline::patching::Patch::in_text(0x79f010).nop().unwrap();
-
     println!("P5R CBT is installed and running");
 }
