@@ -1,3 +1,5 @@
+use std::ffi::CString;
+
 use thiserror::Error;
 use camino::{Utf8Path, Utf8PathBuf};
 
@@ -14,6 +16,9 @@ pub type CriFnBinderHandle = u64;
 #[skyline::from_offset(0x8a92d0)]
 pub fn get_binder_handle() -> CriFnBinderHandle;
 
+#[skyline::from_offset(0x8a92e0)]
+pub fn crifsbinder_bind_cpk(binder: CriFnBinderHandle, path: *const u8) -> i32;
+
 // Old offset: 0x1302710
 #[skyline::from_offset(0x1302910)]
 pub fn crifsbinder_bind_directory(binder: CriFnBinderHandle, src_binder: *const u8, path: *const u8, work: *const u8, work_size: i32, bind_id: &mut u32) -> i32;
@@ -26,12 +31,10 @@ pub fn bind_directory<P: AsRef<Utf8Path>>(binder_handle: CriFnBinderHandle, path
     if !path.is_absolute() {
         Err(DirBindingError::PathNotAbsolute(path.to_path_buf()))
     } else {
-        let nullterm_path = format!("{path}\0");
-
-        let bind_path = skyline::c_str(&nullterm_path);
+        let bind_path = CString::new(path.to_string()).unwrap();
         let mut out_bind_id = 0;
 
-        let result = unsafe { crifsbinder_bind_directory(binder_handle, 0 as _, bind_path, 0 as _, 0, &mut out_bind_id) };
+        let result = unsafe { crifsbinder_bind_directory(binder_handle, 0 as _, bind_path.as_ptr() as _, 0 as _, 0, &mut out_bind_id) };
 
         if result != 0 {
             Err(DirBindingError::CriwareErrorCode(result))

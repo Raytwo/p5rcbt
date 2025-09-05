@@ -1,10 +1,13 @@
-use std::{ffi::CStr, fs::read_dir, str::FromStr, sync::LazyLock};
+use std::{ffi::{CStr, CString}, fs::read_dir, str::FromStr, sync::LazyLock};
 use camino::{Utf8Path, Utf8PathBuf};
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use skyline::hooks::InlineCtx;
 
+use crate::script::Script;
+
 mod criware;
+mod script;
 mod utils;
 
 // Old offset: 0x1025e3c
@@ -14,7 +17,7 @@ pub fn sixty_fps_hook(ctx: &mut InlineCtx) {
 }
 
 #[skyline::hook(offset = 0x8a9134, inline)]
-pub fn mount_directories(_: &InlineCtx) {
+pub fn cri_bind_cpk_hook(ctx: &InlineCtx) {
     let binder_hn = unsafe { criware::bind::get_binder_handle() };
 
     // Merge mods into one virtual filesystem that can then be mounted and accessed by Criware like normal.
@@ -23,18 +26,41 @@ pub fn mount_directories(_: &InlineCtx) {
 
     let base_dir = Utf8PathBuf::from_str("sd:/p5r/bind").unwrap();
 
+    // Bind CPKs first
+    if let Ok(reader) = read_dir(&base_dir) {
+        let mut entries: Vec<_> = reader
+            .filter_map(Result::ok)
+            .filter(|idk| idk.path().is_file() && Utf8Path::from_path(&idk.path()).unwrap().extension().map(|ext| ext.to_lowercase()) == Some(String::from("cpk")))
+            .collect();
+
+        entries.sort_by_key(|dir| dir.file_name());
+        entries.reverse();
+
+        // Only take valid entries
+        for entry in entries {
+            let cpk_path = CString::new(entry.path().to_str().unwrap()).unwrap();
+
+            let result = unsafe { criware::bind::crifsbinder_bind_cpk(ctx.registers[0].x(), cpk_path.as_ptr() as _) };
+
+            if result != 1 {
+                panic!("Error while trying to bind a CPK for Criware: {}", result);
+            }
+        }
+    }
+
     // Don't bother running the rest if the bind directory doesnt even exist.
-    if let Ok(reader) = read_dir(base_dir) {
+    if let Ok(reader) = read_dir(&base_dir) {
         let mut entries: Vec<_> = reader
             .filter_map(Result::ok)
             .filter(|idk| idk.path().is_dir())
             .collect();
 
         entries.sort_by_key(|dir| dir.file_name());
+        entries.reverse();
 
         // Only take valid entries
         for entry in entries {
-            if let Err(error) = criware::bind::bind_directory(binder_hn, dbg!(Utf8Path::from_path(&entry.path()).unwrap())) {
+            if let Err(error) = criware::bind::bind_directory(binder_hn, Utf8Path::from_path(&entry.path()).unwrap()) {
                 panic!("Error while trying to bind a directory for Criware: {}", error);
             }
         }
@@ -62,6 +88,34 @@ pub fn print_criware_error(ctx: &InlineCtx) {
 #[skyline::hook(offset = 0x7ef500)]
 pub fn is_platform_pc() -> bool {
     true
+}
+
+#[skyline::hook(offset = 0x00e33520)]
+pub fn PUT_fix() -> i32 
+{
+    let in_arg = Script::get_int_arg(0);
+    println!("{}", in_arg);
+
+    1
+}
+
+#[skyline::hook(offset = 0x00e33540)]
+pub fn PUTS_fix() -> i32 
+{
+    let in_arg = Script::get_string_arg(0);
+    let c_str = unsafe { CStr::from_ptr(in_arg as *const i8) };
+    println!("{:?}", c_str);
+    
+    1
+}
+
+#[skyline::hook(offset = 0x00e33560)]
+pub fn PUTF_fix() -> i32 
+{
+    let in_arg = Script::get_float_arg(0);
+    println!("{}", in_arg);
+
+    1
 }
 
 #[derive(Serialize, Deserialize)]
@@ -136,7 +190,9 @@ pub fn main() {
         skyline::install_hook!(sixty_fps_hook);
     }
 
-    skyline::install_hook!(mount_directories);
+    skyline::install_hooks!(cri_bind_cpk_hook, PUT_fix, PUTS_fix, PUTF_fix);
+
+    skyline::patching::Patch::in_text(0x79f010).nop().unwrap();
 
     println!("P5R CBT is installed and running");
 }
