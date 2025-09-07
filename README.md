@@ -1,6 +1,9 @@
 # p5rcbt
 A plugin for loading loose files instead of repacking a CPK, powered by [Skyline](https://github.com/skyline-dev/skyline).
 
+> [!CAUTION]
+> Only compatible with version 1.0.2
+
 ## Features
 This comes built-in with the following features:
 
